@@ -66,6 +66,11 @@ DATATABLES_ORDER_COLUMN_CHOICES = Choices(
 )
 
 
+DATATABLES_COLUMN_NUM_LOOKUP = {
+    v:k for k, v in DATATABLES_ORDER_COLUMN_CHOICES
+}
+
+
 def get_query_class():
     from django.conf import settings
 
@@ -132,20 +137,25 @@ class __Query__:
         to a Serializer called DatatablesTicketSerializer in serializers.py.
         """
         objects = self.get()
-        order_by = '-created'
-        draw = int(kwargs.get('draw', [0])[0])
-        length = int(kwargs.get('length', [25])[0])
-        start = int(kwargs.get('start', [0])[0])
-        search_value = kwargs.get('search[value]', [""])[0]
-        order_column = kwargs.get('order[0][column]', ['5'])[0]
-        order = kwargs.get('order[0][dir]', ["asc"])[0]
+        draw = int(kwargs.get("draw", [0])[0])
+        length = int(kwargs.get("length", [25])[0])
+        start = int(kwargs.get("start", [0])[0])
+        search_value = kwargs.get("search[value]", [""])[0]
+
+        sorting = self.params.get("sorting", "created")
+        default_order_col = DATATABLES_COLUMN_NUM_LOOKUP.get(sorting, "5")
+        sortreverse = self.params.get("sortreverse", None)
+        default_order = "desc" if sortreverse else "asc"
+
+        order_column = kwargs.get("order[0][column]", [default_order_col])[0]
+        order = kwargs.get("order[0][dir]", [default_order])[0]
 
         order_column = DATATABLES_ORDER_COLUMN_CHOICES[order_column]
         # django orm '-' -> desc
         if order == 'desc':
             order_column = '-' + order_column
 
-        queryset = objects.all().order_by(order_by)
+        queryset = objects.all()
         total = queryset.count()
 
         if search_value:  # Dead code currently
